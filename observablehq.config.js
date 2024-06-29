@@ -23,6 +23,7 @@ export default {
   root: "src",
   footer: "Built by siddg.com",
   theme: "light",
+  cleanUrls: false,
 
   // Some additional configuration options and their defaults:
   // theme: "default", // try "light", "dark", "slate", etc.
