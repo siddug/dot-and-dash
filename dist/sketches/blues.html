@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Blues | Dot And Dash</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="../_observablehq/theme-air.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="../_observablehq/theme-air.css">
+<link rel="modulepreload" href="../_observablehq/client.js">
+<link rel="modulepreload" href="../_observablehq/runtime.js">
+<link rel="modulepreload" href="../_observablehq/stdlib.js">
+<link rel="icon" href="../_file/observable.1af93621.png" type="image/png" sizes="32x32">
+<script type="module">
+
+import {define} from "../_observablehq/client.js";
+
+define({id: "39d5d4b4", inputs: ["p5"], outputs: ["width","height","pid","seed","randomize","presetup","Notebook","getSketch"], body: (p5) => {
+let width = 600;
+let height = 600;
+let pid = 3;
+let seed = 60;
+let randomize = false;
+
+function presetup(p) {
+  // setup randomizer
+  if (!randomize) {
+    p.randomSeed(seed);
+    p.noiseSeed(seed);
+  }
+
+  // setup pixel denisty
+  p.pixelDensity(pid);
+
+  // draw the base canvas
+  p.createCanvas(width, height);
+}
+
+
+
+class Notebook {
+  constructor(p) {
+    this.p = p;
+    this.grid_w = 15;
+    this.grid_h = 15;
+    this.padding = 0.2;
+    this.cells = [];
+    this.padding = 0.2;
+    this.arrow = 0.1;
+    this.rows = width / this.grid_w;
+    this.cols = height / this.grid_h;
+    this.show_grid = true;
+
+    // handy fn to create more data
+    this.createCells();
+  }
+
+  createCells() {
+    for (var i = 0; i < this.rows; i++) {
+      let row = [];
+      for (var j = 0; j < this.cols; j++) {
+        const x = i * this.grid_w;
+        const y = j * this.grid_h;
+
+        // base grid cell
+        let cell = {
+          x,
+          y,
+          width: this.grid_w,
+          height: this.grid_h,
+          padding: {
+            x: 0.2 * this.grid_w,
+            y: 0.2 * this.grid_h,
+          },
+          angle: this.p.random(0, 360),
+          center: {
+            x: x + this.grid_w / 2,
+            y: y + this.grid_h / 2,
+          },
+        };
+
+        // base flow vector
+        cell.flow = {
+          start: {
+            x: x + cell.padding.x,
+            y: y + cell.height / 2,
+          },
+          end: {
+            x: x + this.grid_w - cell.padding.x,
+            y: y + cell.height / 2,
+          },
+        };
+
+        // arrow head
+        cell.arrow = [
+          {
+            start: {
+              x:
+                cell.flow.end.x -
+                this.p.cos(45) * this.arrow * this.p.min(this.grid_w, this.grid_h),
+              y:
+                cell.flow.end.y -
+                this.p.cos(45) * this.arrow * this.p.min(this.grid_w, this.grid_h),
+            },
+            end: {
+              x: cell.flow.end.x,
+              y: cell.flow.end.y,
+            },
+          },
+          {
+            start: {
+              x:
+                cell.flow.end.x -
+                this.p.cos(45) * this.arrow * this.p.min(this.grid_w, this.grid_h),
+              y:
+                cell.flow.end.y +
+                this.p.cos(45) * this.arrow * this.p.min(this.grid_w, this.grid_h),
+            },
+            end: {
+              x: cell.flow.end.x,
+              y: cell.flow.end.y,
+            },
+          },
+        ];
+
+
+        cell.angle = 45;
+        row.push(cell);
+      }
+
+      this.cells.push(row);
+    }
+  }
+
+  onetime() {
+    this.p.background("black");
+    this.drawFlow();
+  }
+
+  everytime() {
+    // no need for everytime unless interactivity or animation is needed
+  }
+
+  // Drawing a flow
+  drawFlow() {
+    for (var i = 0; i < this.rows; i++) {
+      for (var j = 0; j < this.cols; j++) {
+        if (this.show_grid) {
+          this.drawCell(this.cells[i][j]);
+        }
+        this.drawArrow(this.cells[i][j]);
+      }
+    }
+  }
+
+  // Drawing a grid
+  drawCell(cell) {
+    this.p.stroke("#E7DFE8");
+    this.p.fill("white");
+    this.p.rect(cell.x, cell.y, cell.width, cell.height);
+  }
+  
+  // Drawing an arrow
+  drawArrow(cell) {
+    this.p.push(); // Save the current drawing context
+    this.p.translate(cell.center.x, cell.center.y); // Move to the center of the cell
+    this.p.rotate(this.p.radians(cell.angle)); // Rotate by the given angle in degrees
+    this.p.translate(-1 * cell.center.x, -1 * cell.center.y); // Move back from the center
+
+    this.p.stroke("black");
+    this.p.line(
+      cell.flow.start.x,
+      cell.flow.start.y,
+      cell.flow.end.x,
+      cell.flow.end.y
+    );
+
+    // draw an arrow head to convey the direction.
+    this.p.line(
+      cell.arrow[0].start.x,
+      cell.arrow[0].start.y,
+      cell.arrow[0].end.x,
+      cell.arrow[0].end.y
+    );
+    this.p.line(
+      cell.arrow[1].start.x,
+      cell.arrow[1].start.y,
+      cell.arrow[1].end.x,
+      cell.arrow[1].end.y
+    );
+
+    this.p.pop();
+  }
+
+}
+
+function getSketch(nbClass) {
+  let nb;
+  return (p) => {
+    p.setup = () => {
+      // mandatory
+      presetup(p);
+
+      nb = new nbClass(p);
+      // notebook sepcific
+      nb.onetime(p);
+    };
+    p.draw = () => {
+      if (nb) {
+          nb.everytime();
+      }
+    };
+  }
+}
+
+new p5(getSketch(Notebook), 'sketch1');
+return {width,height,pid,seed,randomize,presetup,Notebook,getSketch};
+}});
+
+define({id: "9b0cfe20", inputs: ["Notebook","p5","getSketch"], outputs: ["Notebook2"], body: (Notebook,p5,getSketch) => {
+class Notebook2 extends Notebook {
+  constructor(p) {
+    super(p);
+
+    // changing angle of arrows.
+    for (var i = 0; i < this.cells.length; i++) {
+      for (var j = 0 ; j < this.cells[i].length; j++) {
+        const cell = this.cells[i][j];
+        cell.angle = 90 + (((180 * i) / this.rows) * j) / this.cols;
+      }
+    }
+  }
+}
+
+new p5(getSketch(Notebook2), 'sketch2');
+return {Notebook2};
+}});
+
+define({id: "89a8a229", inputs: ["Notebook2","width","height","p5","getSketch"], outputs: ["Notebook3"], body: (Notebook2,width,height,p5,getSketch) => {
+class Notebook3 extends Notebook2 {
+  constructor(p) {
+    super(p);
+    this.colors = ["#ffffff"];
+    this.step_length = this.grid_w * 0.4;
+  }
+
+  drawRegularGrid() {
+    // Equal grid
+    const step_length_x = 10;
+    const step_length_y = 10;
+
+    for (var i = 0; i < width; i += step_length_x) {
+      for (var j = 0; j < height; j += step_length_y) {
+        this.drawCurve(i, j);
+      }
+    }
+  }
+
+hexToRgb(hex, alpha) {
+    hex = hex.replace('#', '');
+
+    var bigint = parseInt(hex, 16);
+
+    var r = (bigint >> 16) & 255;
+    var g = (bigint >> 8) & 255;
+    var b = bigint & 255;
+
+    return this.p.color(r, g, b, alpha);
+  }
+
+  drawCurve(sx, sy) {
+
+    let completed = false;
+
+
+    this.p.strokeWeight(1);
+    
+    this.p.noFill();
+
+    this.p.beginShape();
+
+    let x = sx;
+    let y = sy;
+
+    let visits = {};
+
+    this.p.curveVertex(x, y);
+    this.p.curveVertex(x, y);
+
+    while (!completed) {
+      if (x < 0 || x > width || y < 0 || y > height) {
+        completed = true;
+        break;
+      }
+
+      this.p.stroke(this.hexToRgb(this.colors[Math.floor(x) % this.colors.length],155 + this.p.random(100)));
+      
+
+      // get the current cell
+      const row = Math.floor(x / this.grid_w);
+      const col = Math.floor(y / this.grid_h);
+      const cell = this.cells[row][col];
+
+      if ((visits[row] || {})[col] || !cell) {
+        completed = true;
+        break;
+      }
+
+      const angle = cell.angle;
+
+      x = x + this.p.cos(this.p.radians(angle)) * this.step_length;
+      y = y + this.p.sin(this.p.radians(angle)) * this.step_length;
+
+      visits[row] = visits[row] || {};
+      visits[row][col] = true;
+
+      this.p.curveVertex(x, y);
+    }
+
+    this.p.curveVertex(x, y);
+
+    this.p.endShape();
+  }
+
+  drawFlow() {
+    this.drawRegularGrid();
+  }
+}
+
+new p5(getSketch(Notebook3), 'sketch3');
+return {Notebook3};
+}});
+
+define({id: "84468405", inputs: ["Notebook3","p5","getSketch"], outputs: ["Notebook4"], body: (Notebook3,p5,getSketch) => {
+class Notebook4 extends Notebook3 {
+  constructor(p) {
+    super(p);
+    this.colors = ["#ffffff"];
+    this.step_length = this.grid_w * 0.7;
+  }
+}
+
+new p5(getSketch(Notebook4), 'sketch4');
+return {Notebook4};
+}});
+
+define({id: "883d945d", inputs: ["Notebook4","p5","getSketch"], outputs: ["Notebook5"], body: (Notebook4,p5,getSketch) => {
+class Notebook5 extends Notebook4 {
+  constructor(p) {
+    super(p);
+    this.colors = ["#caf0f8", "#ade8f4", "#48cae4", "#00b4d8", "#0096c7", "#0077b6", "#023e8a", "#03045e"];
+    this.step_length = this.grid_w * 1.2;
+  }
+}
+
+new p5(getSketch(Notebook5), 'sketch5');
+return {Notebook5};
+}});
+
+define({id: "80cad888", inputs: ["Notebook5","width","height","p5","getSketch"], outputs: ["Notebook6"], body: (Notebook5,width,height,p5,getSketch) => {
+class Notebook6 extends Notebook5 {
+  constructor(p) {
+    super(p);
+  }
+
+  drawFlow() {
+    this.drawUniformlyRandomGrid();
+  }
+
+  drawUniformlyRandomGrid() {
+    const numElements = 10000; // Number of elements to draw
+
+    for (let i = 0; i < numElements; i++) {
+      const x1 = this.p.random(width);
+      const y1 = this.p.random(height);
+
+      this.drawCurve(x1, y1);
+    }
+  }
+}
+
+new p5(getSketch(Notebook6), 'sketch6');
+return {Notebook6};
+}});
+
+define({id: "a3c29b95", inputs: ["Notebook6","p5","getSketch"], outputs: ["Notebook7"], body: (Notebook6,p5,getSketch) => {
+class Notebook7 extends Notebook6 {
+  constructor(p) {
+    super(p);
+
+    // changing angle of arrows.
+    for (var i = 0; i < this.cells.length; i++) {
+      for (var j = 0 ; j < this.cells[i].length; j++) {
+        const cell = this.cells[i][j];
+         // perlin continuous
+        this.p.noiseDetail(5, 0.6);
+        cell.angle = this.p.map(this.p.noise(0.005*j, 0.005*i), 0, 1, 0, 720);
+      }
+    }
+
+  }
+
+}
+
+new p5(getSketch(Notebook7), 'sketch7');
+return {Notebook7};
+}});
+
+define({id: "29815049", inputs: ["Notebook7","p5","getSketch"], outputs: ["Notebook8"], body: (Notebook7,p5,getSketch) => {
+class Notebook8 extends Notebook7 {
+  constructor(p) {
+    super(p);
+
+    // changing angle of arrows.
+    for (var i = 0; i < this.cells.length; i++) {
+      for (var j = 0 ; j < this.cells[i].length; j++) {
+        const cell = this.cells[i][j];
+         // perlin continuous
+        this.p.noiseDetail(5, 0.6);
+        cell.angle = Math.floor(this.p.map(this.p.noise(0.005*j, 0.005*i), 0, 1, 0, 720/30))*30;
+      }
+    }
+  }
+
+}
+
+new p5(getSketch(Notebook8), 'sketch8');
+return {Notebook8};
+}});
+
+define({id: "31e71ae5", inputs: ["Notebook8","p5","getSketch"], outputs: ["Notebook9"], body: (Notebook8,p5,getSketch) => {
+class Notebook9 extends Notebook8 {
+  constructor(p) {
+    super(p);
+
+    // changing angle of arrows.
+    for (var i = 0; i < this.cells.length; i++) {
+      for (var j = 0 ; j < this.cells[i].length; j++) {
+        const cell = this.cells[i][j];
+        cell.angle = this.p.random() * 260;
+      }
+    }
+  }
+
+}
+
+new p5(getSketch(Notebook9), 'sketch9');
+return {Notebook9};
+}});
+
+</script>
+<input id="observablehq-sidebar-toggle" type="checkbox" title="Toggle sidebar">
+<label id="observablehq-sidebar-backdrop" for="observablehq-sidebar-toggle"></label>
+<nav id="observablehq-sidebar">
+  <ol>
+    <label id="observablehq-sidebar-close" for="observablehq-sidebar-toggle"></label>
+    <li class="observablehq-link"><a href="../">Dot And Dash</a></li>
+  </ol>
+  <ol>
+    <li class="observablehq-link observablehq-link-active"><a href="./blues">Blues</a></li>
+  </ol>
+</nav>
+<script>{Object.assign(document.createElement("a"),{href:""}).password&&location.replace(location.href);const e=document.querySelector("#observablehq-sidebar"),t=document.querySelector("#observablehq-sidebar-toggle"),r=sessionStorage.getItem("observablehq-sidebar");r?t.checked=r==="true":t.indeterminate=!0;for(const o of document.querySelectorAll("#observablehq-sidebar summary")){const s=o.parentElement;switch(sessionStorage.getItem(`observablehq-sidebar:${o.textContent}`)){case"true":s.open=!0;break;case"false":s.classList.contains("observablehq-section-active")||(s.open=!1);break}}addEventListener("beforeunload",()=>sessionStorage.setItem("observablehq-sidebar-scrolly",`${e.scrollTop}`));const a=sessionStorage.getItem("observablehq-sidebar-scrolly");a!=null&&(e.style.cssText="overflow: hidden;",e.scrollTop=+a,e.style.cssText="");}</script>
+<aside id="observablehq-toc" data-selector="h1:not(:first-of-type)[id], h2:first-child[id], :not(h1) + h2[id]">
+<nav>
+<div>Contents</div>
+<ol>
+<li class="observablehq-secondary-link"><a href="#a-grid-of-cells-with-an-arrow-in-each-of-them">A grid of cells with an arrow in each of them</a></li>
+<li class="observablehq-secondary-link"><a href="#curved-arrows-(my-fn)">Curved arrows (my fn)</a></li>
+<li class="observablehq-secondary-link"><a href="#drawing-curves-(small-step_length)">Drawing curves (small step_length)</a></li>
+<li class="observablehq-secondary-link"><a href="#drawing-curves-(mid-step-length)">Drawing curves (mid step length)</a></li>
+<li class="observablehq-secondary-link"><a href="#drawing-curves-(colors)">Drawing curves (colors)</a></li>
+<li class="observablehq-secondary-link"><a href="#field-(randomly-uniform-grid)">Field (randomly uniform grid)</a></li>
+<li class="observablehq-secondary-link"><a href="#adding-perlin-noise">Adding Perlin Noise</a></li>
+<li class="observablehq-secondary-link"><a href="#adding-perlin-noise-(discontinuous)">Adding Perlin Noise (discontinuous)</a></li>
+<li class="observablehq-secondary-link"><a href="#random-noise">Random Noise</a></li>
+</ol>
+</nav>
+</aside>
+<div id="observablehq-center">
+<main id="observablehq-main" class="observablehq">
+<h1 id="blues" tabindex="-1"><a class="observablehq-header-anchor" href="#blues">Blues</a></h1>
+<p>Learning p5.js and understanding basics of curves and flow fields.</p>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+<hr>
+<h2 id="a-grid-of-cells-with-an-arrow-in-each-of-them" tabindex="-1"><a class="observablehq-header-anchor" href="#a-grid-of-cells-with-an-arrow-in-each-of-them">A grid of cells with an arrow in each of them</a></h2>
+<br>
+<div id="sketch1"></div>
+<div class="observablehq observablehq--block"><!--:39d5d4b4:--></div>
+<hr>
+<h2 id="curved-arrows-(my-fn)" tabindex="-1"><a class="observablehq-header-anchor" href="#curved-arrows-(my-fn)">Curved arrows (my fn)</a></h2>
+<br>
+<div id="sketch2"></div>
+<div class="observablehq observablehq--block"><!--:9b0cfe20:--></div>
+<hr>
+<h2 id="drawing-curves-(small-step_length)" tabindex="-1"><a class="observablehq-header-anchor" href="#drawing-curves-(small-step_length)">Drawing curves (small step_length)</a></h2>
+<br>
+<div id="sketch3"></div>
+<div class="observablehq observablehq--block"><!--:89a8a229:--></div>
+<hr>
+<h2 id="drawing-curves-(mid-step-length)" tabindex="-1"><a class="observablehq-header-anchor" href="#drawing-curves-(mid-step-length)">Drawing curves (mid step length)</a></h2>
+<br>
+<div id="sketch4"></div>
+<div class="observablehq observablehq--block"><!--:84468405:--></div>
+<hr>
+<h2 id="drawing-curves-(colors)" tabindex="-1"><a class="observablehq-header-anchor" href="#drawing-curves-(colors)">Drawing curves (colors)</a></h2>
+<br>
+<div id="sketch5"></div>
+<div class="observablehq observablehq--block"><!--:883d945d:--></div>
+<hr>
+<h2 id="field-(randomly-uniform-grid)" tabindex="-1"><a class="observablehq-header-anchor" href="#field-(randomly-uniform-grid)">Field (randomly uniform grid)</a></h2>
+<br>
+<div id="sketch6"></div>
+<div class="observablehq observablehq--block"><!--:80cad888:--></div>
+<hr>
+<h2 id="adding-perlin-noise" tabindex="-1"><a class="observablehq-header-anchor" href="#adding-perlin-noise">Adding Perlin Noise</a></h2>
+<br>
+<div id="sketch7"></div>
+<div class="observablehq observablehq--block"><!--:a3c29b95:--></div>
+<hr>
+<h2 id="adding-perlin-noise-(discontinuous)" tabindex="-1"><a class="observablehq-header-anchor" href="#adding-perlin-noise-(discontinuous)">Adding Perlin Noise (discontinuous)</a></h2>
+<br>
+<div id="sketch8"></div>
+<div class="observablehq observablehq--block"><!--:29815049:--></div>
+<hr>
+<h2 id="random-noise" tabindex="-1"><a class="observablehq-header-anchor" href="#random-noise">Random Noise</a></h2>
+<br>
+<div id="sketch9"></div>
+<div class="observablehq observablehq--block"><!--:31e71ae5:--></div>
+</main>
+<footer id="observablehq-footer">
+<nav><a rel="prev" href="../"><span>Dot And Dash</span></a></nav>
+<div>Built by siddg.com</div>
+</footer>
+</div>
